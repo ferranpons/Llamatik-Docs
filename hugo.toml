@@ -2,11 +2,11 @@ baseURL = 'https://docs.llamatik.com/'
 languageCode = 'en-us'
 title = 'Llamatik Documentation'
 
-googleAnalytics = "UA-XXXXXXXXX-X"
+googleAnalytics = ""
 
 theme = 'hugo-book'
 
-copyright = 'Copyright © 2025 Llamatik. All rights reserved.'
+copyright = 'Copyright © 2026 Llamatik. All rights reserved.'
 
 enableGitInfo = true
 
@@ -22,9 +22,14 @@ url = 'https://github.com/ferranpons/Llamatik/'
 weight = 10
 
 [[menu.after]]
-name = 'Hugo Themes'
-url = 'https://themes.gohugo.io/themes/hugo-book/'
+name = 'Maven Central'
+url = 'https://search.maven.org/search?q=g:com.llamatik'
 weight = 20
+
+[[menu.after]]
+name = 'Llamatik App'
+url = 'https://llamatik.com/'
+weight = 30
 
 [params]
 # (Optional, default light) Sets color theme: light, dark or auto.
