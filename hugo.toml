@@ -16,6 +16,36 @@ enableGitInfo = true
   contentDir = 'content.en'
   weight = 1
 
+[languages.fr]
+  languageName = "Français"
+  contentDir = 'content.fr'
+  weight = 2
+
+[languages.it]
+  languageName = "Italiano"
+  contentDir = 'content.it'
+  weight = 3
+
+[languages.es]
+  languageName = "Español"
+  contentDir = 'content.es'
+  weight = 4
+
+[languages.de]
+  languageName = "Deutsch"
+  contentDir = 'content.de'
+  weight = 5
+
+[languages.ru]
+  languageName = "Русский"
+  contentDir = 'content.ru'
+  weight = 6
+
+[languages.zh]
+  languageName = "中文"
+  contentDir = 'content.zh'
+  weight = 7
+
 [[menu.after]]
 name = 'Github'
 url = 'https://github.com/ferranpons/Llamatik/'

@@ -1,0 +1,15 @@
+title = "Llamatik"
+tagline = "Kotlin-first Integration von llama.cpp für lokale und entfernte LLM-Inferenz"
+
+getting_started = "Erste Schritte"
+installation = "Installation"
+quickstart = "Schnellstart"
+guides = "Anleitungen"
+api_reference = "API-Referenz"
+troubleshooting = "Fehlerbehebung"
+contributing = "Mitwirken"
+license = "Lizenz"
+
+download = "Herunterladen"
+learn_more = "Mehr erfahren"
+back_to_top = "Nach oben"

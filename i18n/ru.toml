@@ -1,0 +1,15 @@
+title = "Llamatik"
+tagline = "Интеграция llama.cpp с приоритетом Kotlin для локального и удалённого LLM-инференса"
+
+getting_started = "Начало работы"
+installation = "Установка"
+quickstart = "Быстрый старт"
+guides = "Руководства"
+api_reference = "Справочник API"
+troubleshooting = "Устранение неполадок"
+contributing = "Вклад в проект"
+license = "Лицензия"
+
+download = "Скачать"
+learn_more = "Узнать больше"
+back_to_top = "Наверх"

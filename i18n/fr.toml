@@ -1,0 +1,15 @@
+title = "Llamatik"
+tagline = "Intégration Kotlin-first de llama.cpp pour l'inférence LLM locale et distante"
+
+getting_started = "Bien démarrer"
+installation = "Installation"
+quickstart = "Démarrage rapide"
+guides = "Guides"
+api_reference = "Référence API"
+troubleshooting = "Dépannage"
+contributing = "Contribuer"
+license = "Licence"
+
+download = "Télécharger"
+learn_more = "En savoir plus"
+back_to_top = "Retour en haut"

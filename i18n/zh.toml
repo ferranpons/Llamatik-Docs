@@ -1,0 +1,15 @@
+title = "Llamatik"
+tagline = "以 Kotlin 为核心的 llama.cpp 集成，用于本地和远程 LLM 推理"
+
+getting_started = "快速开始"
+installation = "安装"
+quickstart = "入门指南"
+guides = "指南"
+api_reference = "API 参考"
+troubleshooting = "故障排除"
+contributing = "参与贡献"
+license = "许可证"
+
+download = "下载"
+learn_more = "了解更多"
+back_to_top = "返回顶部"
