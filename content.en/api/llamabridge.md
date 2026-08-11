@@ -228,18 +228,42 @@ fun sessionReset(): Boolean
 fun sessionSave(path: String): Boolean
 fun sessionLoad(path: String): Boolean
 fun generateContinue(prompt: String): String
+fun generateContinueStream(prompt: String, callback: GenStream)
 ```
 
 These methods are designed for multi-turn interactions.
 
 ### `generateContinue(prompt)`
-Continues generation using the current KV cache instead of starting from scratch.
+Continues generation (blocking) using the current KV cache instead of starting from scratch.
 
 ```kotlin
 LlamaBridge.initGenerateModel(modelPath)
 
 val first = LlamaBridge.generate("Explain Kotlin coroutines")
 val second = LlamaBridge.generateContinue("Now show a short example")
+```
+
+### `generateContinueStream(prompt, callback)`
+Streaming equivalent of `generateContinue`. Reuses the existing KV cache and streams tokens via `callback`.
+
+Internally the C++ layer tokenizes the full prompt, finds the longest common token prefix between the new prompt and the cached context, trims only the diverging suffix from the KV cache, and decodes just the new tokens. This means prior turns are never re-encoded, regardless of how long the conversation history is.
+
+Falls back to a fresh `generateStream` when no session is active, so it is safe to call unconditionally.
+
+```kotlin
+// Restore KV state from disk and continue streaming
+LlamaBridge.sessionLoad(sessionPath)
+LlamaBridge.generateContinueStream(
+    prompt = "What about multiplatform support?",
+    callback = object : GenStream {
+        override fun onDelta(text: String) = print(text)
+        override fun onComplete() {
+            println("\nDone")
+            LlamaBridge.sessionSave(sessionPath)
+        }
+        override fun onError(message: String) = println("Error: $message")
+    }
+)
 ```
 
 ### `sessionSave(path)` and `sessionLoad(path)`
@@ -261,7 +285,7 @@ This is useful when you want to start a new conversation without paying the full
 Important notes:
 - Session files are tied to the same model and runtime assumptions.
 - On WASM, session persistence is currently not implemented.
-- If no active session exists yet, `generateContinue()` behaves like a fresh generation.
+- If no active session exists yet, both `generateContinue()` and `generateContinueStream()` fall back to fresh generation.
 
 ## Model introspection
 

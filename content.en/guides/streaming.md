@@ -50,8 +50,48 @@ LlamaBridge.generateJsonStream(
 
 ## Streaming with KV cache continuity
 
-A common issue was that streaming across multiple turns caused the model to lose memory — the KV cache was being reset on every call.
-The correct pattern is to use `LlamaSession` for streaming multi-turn conversations:
+Every streaming function on `LlamaBridge` (`generateStream`, `generateStreamWithContext`, etc.) resets the KV cache before each call by design. To keep the model's memory across turns while streaming, you have two options.
+
+### Option 1 — `generateContinueStream` (global KV cache, supports disk persistence)
+
+`generateContinueStream` is the streaming equivalent of `generateContinue`. It reuses the existing global KV cache instead of resetting it. The C++ layer finds the longest common token prefix between the new prompt and the cached context, trims only the diverging tail from the KV cache, and decodes just the new tokens — so prior turns are never re-encoded.
+
+```kotlin
+LlamaBridge.initGenerateModel(modelPath)
+
+// Turn 1 — no prior session, behaves like generateStream
+LlamaBridge.generateContinueStream(
+    prompt = "Explain Kotlin coroutines.",
+    callback = object : GenStream {
+        override fun onDelta(text: String) = print(text)
+        override fun onComplete() {
+            println()
+            LlamaBridge.sessionSave(sessionPath)
+        }
+        override fun onError(message: String) = println("Error: $message")
+    }
+)
+
+// Turn 2 — load the saved session and stream the continuation
+LlamaBridge.sessionLoad(sessionPath)
+LlamaBridge.generateContinueStream(
+    prompt = "Now show a short example.",
+    callback = object : GenStream {
+        override fun onDelta(text: String) = print(text)
+        override fun onComplete() {
+            println()
+            LlamaBridge.sessionSave(sessionPath)
+        }
+        override fun onError(message: String) = println("Error: $message")
+    }
+)
+```
+
+Use this when you need **streaming + disk-serialized session persistence** across app restarts.
+
+### Option 2 — `LlamaSession` (in-memory KV cache, supports concurrency)
+
+For in-process conversations without disk persistence, `LlamaSession` is simpler. Each `session.stream(...)` call appends to the session's in-memory KV cache automatically.
 
 ```kotlin
 LlamaBridge.initGenerateModel(modelPath)
@@ -82,14 +122,16 @@ session.stream(
 session.close()
 ```
 
-Each `session.stream(...)` call appends its prompt tokens to the session's KV cache and generates from there.
-The global `LlamaBridge.generateStream(...)` is stateless by design and does not carry KV state across calls.
-Use `LlamaSession` whenever you need the model to remember previous turns during streaming.
+Use this when you need **multiple concurrent independent streams** or no cross-restart persistence is required.
+
+See [KV cache and sessions]({{< relref "kv-cache-and-sessions" >}}) for a full comparison.
 
 ## Lifecycle tips
 
 - Cancel generation when the user navigates away.
 - Buffer deltas and render efficiently.
-- Use `LlamaSession` for multi-turn streaming; use `LlamaBridge.generateStream(...)` only for independent one-shot requests.
+- Use `generateContinueStream` when you need KV-cache reuse with disk persistence.
+- Use `LlamaSession` when you need concurrent independent streams.
+- Use `LlamaBridge.generateStream(...)` only for independent one-shot requests.
 - Do not start multiple heavy streams on the same small device unless you have tested the behavior carefully.
 - On WASM, prefer streaming APIs when running in worker-only mode.

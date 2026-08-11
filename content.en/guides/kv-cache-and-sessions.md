@@ -6,18 +6,20 @@ weight: 6
 KV cache reuse is one of the most important performance features for chat-like experiences.
 Instead of rebuilding the full prompt state from scratch for every turn, the model can continue from what it has already processed.
 
-There are two ways to use the KV cache:
+There are three ways to use the KV cache:
 
-- **`LlamaSession`** — for streaming multi-turn conversations. Each session owns an isolated KV cache that persists across `stream()` calls. This is the recommended approach for chat UIs.
-- **Global session methods** — for non-streaming multi-turn generation via `generateContinue()`, with optional disk persistence via `sessionSave()`/`sessionLoad()`.
+- **`LlamaSession`** — for streaming multi-turn conversations with an in-memory KV cache that persists across `stream()` calls. Recommended for chat UIs that do not need cross-process persistence.
+- **`generateContinueStream`** — streaming multi-turn generation with the global KV cache. Supports `sessionSave`/`sessionLoad` for persistence across restarts. The correct choice when you need both streaming and disk-serialized session state.
+- **`generateContinue`** — blocking (non-streaming) continuation. Use when you do not need incremental token delivery.
 
-## Core methods (global, non-streaming)
+## Core methods (global)
 
 ```kotlin
 LlamaBridge.sessionReset()
 LlamaBridge.sessionSave(path)
 LlamaBridge.sessionLoad(path)
-LlamaBridge.generateContinue(prompt)
+LlamaBridge.generateContinue(prompt)          // blocking
+LlamaBridge.generateContinueStream(prompt, callback) // streaming
 ```
 
 ## Fresh turn vs continued turn
@@ -77,11 +79,50 @@ LlamaBridge.sessionReset()
 
 This is useful when the user starts a new conversation but you want to keep the model loaded.
 
-## Streaming multi-turn chat with KV continuity
+## Streaming with `generateContinueStream`
 
-For streaming conversations, use `LlamaSession` instead of the global methods.
-Each `session.stream(...)` call appends the new prompt tokens to the session's existing KV cache,
-so the model retains full memory of previous turns.
+`generateContinueStream` is the streaming equivalent of `generateContinue`. It uses the global KV cache and is the right choice when you also need `sessionSave`/`sessionLoad` for cross-restart persistence.
+
+Under the hood the C++ implementation:
+1. Tokenizes the full new prompt (including BOS).
+2. Finds the longest common token prefix between the new prompt and the cached context.
+3. Trims the KV cache to that prefix (discards only the diverging tail).
+4. Decodes only the new suffix tokens — prior turns are never re-encoded.
+
+This means the performance gain grows with each additional turn, not just the first one.
+
+```kotlin
+LlamaBridge.initGenerateModel(modelPath)
+
+// Turn 1 — no prior session, falls back to a fresh stream
+LlamaBridge.generateContinueStream("Explain Kotlin coroutines.", object : GenStream {
+    override fun onDelta(text: String) = print(text)
+    override fun onComplete() {
+        println()
+        LlamaBridge.sessionSave(sessionPath)   // persist after each turn
+    }
+    override fun onError(message: String) = println("Error: $message")
+})
+
+// Turn 2 — restore the saved session and stream the continuation
+LlamaBridge.sessionLoad(sessionPath)
+LlamaBridge.generateContinueStream("Now give a short example.", object : GenStream {
+    override fun onDelta(text: String) = print(text)
+    override fun onComplete() {
+        println()
+        LlamaBridge.sessionSave(sessionPath)
+    }
+    override fun onError(message: String) = println("Error: $message")
+})
+```
+
+`generateContinueStream` falls back to a fresh `generateStream` when no session is active, so it is safe to call for every turn without checking session state first.
+
+## Streaming multi-turn chat with `LlamaSession`
+
+For in-process streaming conversations without disk persistence, `LlamaSession` is the simpler option.
+Each `session.stream(...)` call appends the new prompt tokens to the session's existing in-memory KV cache,
+so the model retains full memory of previous turns without any explicit save/load.
 
 ```kotlin
 LlamaBridge.initGenerateModel(modelPath)
@@ -100,16 +141,24 @@ session.close()
 ```
 
 The global `LlamaBridge.generateStream(...)` is stateless and does not carry KV context across calls.
-Use `LlamaSession` whenever the model must remember previous turns while streaming.
 
 See [Concurrent Sessions]({{< relref "concurrent-sessions" >}}) for running multiple independent sessions in parallel.
+
+## Choosing between `generateContinueStream` and `LlamaSession`
+
+| | `generateContinueStream` | `LlamaSession` |
+|---|---|---|
+| Streaming | Yes | Yes |
+| KV cache persists across app restarts | Yes (via `sessionSave`/`sessionLoad`) | No |
+| Multiple concurrent streams | No (global state) | Yes |
+| WASM support | No (session persistence unavailable) | No |
 
 ## Important limitations
 
 - Session persistence (`sessionSave`/`sessionLoad`) is currently unavailable on WASM.
 - Session files must be used with the same model that created them.
-- If no active session exists, `generateContinue(...)` falls back to fresh generation behavior.
-- `LlamaSession` is not supported on WASM — use `LlamaBridge.generateStream(...)` there instead.
+- If no active session exists, both `generateContinue()` and `generateContinueStream()` fall back to fresh generation.
+- `LlamaSession` is not supported on WASM — use `LlamaBridge.generateStream(...)` or `LlamaBridge.generateContinueStream(...)` there instead.
 
 ## When this feature is worth using
 
