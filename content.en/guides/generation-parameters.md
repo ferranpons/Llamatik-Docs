@@ -84,6 +84,8 @@ Start with `-1` to offload everything, then reduce if you hit memory limits.
 This parameter requires a model reload to take effect.
 On WASM, `gpuLayers` is silently ignored — there is no GPU offload path in the WebAssembly target.
 
+> **Note:** Vulkan and CUDA are not enabled in the pre-built Maven Central artifacts. To use them you must build Llamatik from source with the appropriate CMake flag. See [Building from source]({{< ref "guides/building-from-source" >}}) for instructions.
+
 ## Tuning advice
 
 - Start from moderate values and test on a fixed prompt set.

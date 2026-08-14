@@ -16,3 +16,4 @@ Practical guides for the most important Llamatik workflows.
 - Whisper speech-to-text
 - Multimodal vision (VLM)
 - Multi-Token Prediction (MTP)
+- Building from source (GPU backends)
